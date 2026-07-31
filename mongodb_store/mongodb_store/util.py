@@ -79,7 +79,7 @@ def check_and_get_service_result_async(
     client: rclpy.client.Client,
     request,
     existence_timeout: typing.Optional[float] = 1,
-    spin_timeout: typing.Optional[float] = None,
+    call_timeout: typing.Optional[float] = None,
 ) -> typing.Tuple[typing.Optional[typing.Any], str]:
     """
     Check the service for the given client exists, then call it and retrieve the response asynchronously,
@@ -100,27 +100,12 @@ def check_and_get_service_result_async(
     Returns:
         Tuple with result of the call, or None if it failed, and a message
     """
+    node.get_logger().warning(f'Deprecation warning. Consider using client.call with a multithreadded executor instead.\nFirst usage at\n{"".join(traceback.format_stack(limit=3))}', once=True)
     if not client.wait_for_service(timeout_sec=existence_timeout):
         message = f"Couldn't find {client.srv_name}"
         node.get_logger().error(message)
         return None, message
-    resp_future = client.call_async(request)
-    # Don't use rclpy.spin_until_future_completes on the node because then the node is removed from the global
-    # executor and will not receive any further callbacks
-    if not node.executor:
-        # do this in case the node doesn't have an executor, and remove the executor after we're done, otherwise the
-        # executor is permanently set as that node's executor
-        rclpy.spin_until_future_complete(
-            node,
-            resp_future,
-            timeout_sec=spin_timeout,
-            executor=MultiThreadedExecutor(),
-        )
-        node.executor = None
-    else:
-        node.executor.spin_until_future_complete(resp_future, timeout_sec=spin_timeout)
-
-    return resp_future.result(), f"Successfully called {client.srv_name}"
+    return client.call(request, call_timeout), f"Successfully called {client.srv_name}"
 
 
 def check_for_pymongo():
