@@ -81,7 +81,8 @@ class MessageStoreProxy:
                     found_services_first_try = False
                     self.parent_node.get_logger().error(
                         f"Could not get message store service {service.srv_name}. Maybe the message "
-                        "store has not been started? Retrying..."
+                        "store has not been started? Retrying...",
+                        once=True
                     )
                     all_ok = False
 
